@@ -83,6 +83,7 @@ if ((Test-Path $outLib) -and (Test-Path $stamp)) {
 }
 
 $cmakeToolset = if ($Compiler -eq 'Clang') { @('-T', 'ClangCL') } else { @() }
+$crtRuntime = if ($Config -eq 'Debug') { 'MultiThreadedDebug' } else { 'MultiThreaded' }
 
 Write-Host "Configuring mbedTLS in $buildDir"
 # Auto-detect the default Visual Studio CMake generator for the installed VS
@@ -96,14 +97,19 @@ cmake -S $mbedSrc -B $buildDir -G $generator -A $Platform @cmakeToolset `
     -DBUILD_SHARED_LIBS=OFF `
     -DENABLE_TESTING=OFF `
     -DENABLE_PROGRAMS=OFF `
-    -DCMAKE_MSVC_RUNTIME_LIBRARY="MultiThreaded$<$<CONFIG:Debug>:Debug>"
+    -DCMAKE_POLICY_DEFAULT_CMP0091=NEW `
+    "-DCMAKE_MSVC_RUNTIME_LIBRARY=$crtRuntime"
+if ($LASTEXITCODE -ne 0) { throw 'mbedTLS configure failed' }
 
 Write-Host "Building mbedTLS libs ($Config)"
 cmake --build $buildDir --config $Config --target mbedcrypto mbedx509 mbedtls
+if ($LASTEXITCODE -ne 0) { throw 'mbedTLS build failed' }
 
 function Find-Lib([string]$name) {
-    $hits = Get-ChildItem -Path $buildDir -Recurse -File -Filter $name | Select-Object -First 1
-    if (-not $hits) { throw "Expected library not found: $name" }
+    $hits = Get-ChildItem -Path $buildDir -Recurse -File -Filter $name |
+        Where-Object { $_.FullName -like "*\$Config\*" } |
+        Select-Object -First 1
+    if (-not $hits) { throw "Expected $Config library not found: $name" }
     return $hits.FullName
 }
 
@@ -114,6 +120,7 @@ $tls    = Find-Lib 'mbedtls.lib'
 if (Test-Path $outLib) { Remove-Item -Force $outLib }
 Write-Host "Packing into $outLib"
 lib /nologo /OUT:$outLib $crypto $x509 $tls
+if ($LASTEXITCODE -ne 0) { throw 'mbedTLS archive creation failed' }
 
 Set-Content -NoNewline -Path $stamp -Value $stampValue
 Write-Host "Done. Output: $outLib"
