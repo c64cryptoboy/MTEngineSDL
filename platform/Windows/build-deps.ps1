@@ -46,13 +46,19 @@ if (-not $Platform) {
 
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 
+Write-Host "`n=== Building libuv ($Platform $Configuration $Compiler) ===" -ForegroundColor Cyan
+& "$scriptDir\build-libuv.ps1" -Platform $Platform -Config $Configuration -Compiler $Compiler
+
+Write-Host "`n=== Building uSockets ($Platform $Configuration $Compiler) ===" -ForegroundColor Cyan
+& "$scriptDir\build-usockets.ps1" -Platform $Platform -Config $Configuration -Compiler $Compiler
+
 Write-Host "`n=== Building llama.cpp ($Platform $Configuration $Compiler) ===" -ForegroundColor Cyan
-& "$scriptDir\build-llama-cpp.ps1" -Platform $Platform -Configuration $Configuration -Compiler $Compiler -SkipCuda:($SkipCuda -or ($Platform -eq 'ARM64'))
+& "$scriptDir\build-llama-cpp.ps1" -Platform $Platform -Config $Configuration -Compiler $Compiler -SkipCuda:($SkipCuda -or ($Platform -eq 'ARM64'))
 
 Write-Host "`n=== Building FTXUI ($Platform $Configuration $Compiler) ===" -ForegroundColor Cyan
-& "$scriptDir\build-ftxui.ps1" -Platform $Platform -Configuration $Configuration -Compiler $Compiler
+& "$scriptDir\build-ftxui.ps1" -Platform $Platform -Config $Configuration -Compiler $Compiler
 
 Write-Host "`n=== Building mbedTLS ($Platform $Configuration $Compiler) ===" -ForegroundColor Cyan
-& "$scriptDir\build-mbedtls.ps1" -Platform $Platform -Configuration $Configuration -Compiler $Compiler
+& "$scriptDir\build-mbedtls.ps1" -Platform $Platform -Config $Configuration -Compiler $Compiler
 
 Write-Host "`n=== All dependencies built successfully ===" -ForegroundColor Green
